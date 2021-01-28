@@ -14,10 +14,13 @@ class BackgroundTask:
         self.is_async = asyncio.iscoroutinefunction(func)
 
     async def __call__(self) -> None:
+        await self.get_coroutine()
+
+    def get_coroutine(self) -> typing.Coroutine:
         if self.is_async:
-            await self.func(*self.args, **self.kwargs)
+            return self.func(*self.args, **self.kwargs)
         else:
-            await run_in_threadpool(self.func, *self.args, **self.kwargs)
+            return run_in_threadpool(self.func, *self.args, **self.kwargs)
 
 
 class BackgroundTasks(BackgroundTask):
@@ -31,5 +34,4 @@ class BackgroundTasks(BackgroundTask):
         self.tasks.append(task)
 
     async def __call__(self) -> None:
-        for task in self.tasks:
-            await task()
+        await asyncio.gather(*(task.get_coroutine() for task in self.tasks))
